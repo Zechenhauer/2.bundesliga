@@ -4,29 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>2. Bundesliga PRO Dashboard — Ultimativ</title>
+
+    <!-- Perfektes Inline-SVG Icon für den Homescreen -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22%23002395%22/><text x=%2250%22 y=%2270%22 font-size=%2260%22 text-anchor=%22middle%22>⚽</text></svg>">
+    <link rel="apple-touch-icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22%23002395%22/><text x=%2250%22 y=%2270%22 font-size=%2260%22 text-anchor=%22middle%22>⚽</text></svg>">
     
-    <!-- OneSignal SDK -->
-    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-    <script>
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-      window.OneSignalDeferred.push(async function(OneSignal) {
-        await OneSignal.init({
-          appId: "30528bc1-cf0a-475d-bc60-12bd4bf0b7b9",
-          safari_web_id: "",
-          path: "/2.bundesliga/",
-          allowLocalhostAsSecureOrigin: true,
-          notifyButton: {
-            enable: true,
-            size: 'medium',
-            position: 'bottom-right',
-            colors: {
-              'circle.background': '#00ff87',
-              'circle.foreground': '#000000',
-            }
-          },
-        });
-      });
-    </script>
+    <!-- Supabase Client Bibliothek laden -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
         :root {
@@ -39,7 +23,6 @@
             --text-muted: #8b949e;
             --border-color: #30363d;
             --live-red: #ff3333;
-            --bayern-red: #dc052d;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
         body { background-color: var(--bg-color); color: var(--text-main); padding: 15px; display: flex; justify-content: center; }
@@ -59,7 +42,6 @@
         .ticker-track { display: flex; white-space: nowrap; will-change: transform; animation: ticker-scroll 35s linear infinite; }
         .ticker-track:hover { animation-play-state: paused; }
         .ticker-item { display: inline-flex; align-items: center; background: #150a0d; border: 1px solid var(--border-color); padding: 6px 14px; margin: 0 6px; border-radius: 8px; color: #ffffff; font-size: 0.82rem; font-weight: 500; gap: 10px; }
-        .ticker-item.bayern-ticker { background: rgba(220, 5, 45, 0.25) !important; border-color: var(--bayern-red); }
         .ticker-team-logo { width: 20px; height: 20px; object-fit: contain; vertical-align: middle; }
         .ticker-score { color: #ffffff; font-weight: bold; font-size: 0.9rem; background: #251216; padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border-color); }
         @keyframes ticker-scroll { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-50%, 0, 0); } }
@@ -85,6 +67,12 @@
         .stack-layout { display: flex; flex-direction: column; gap: 20px; }
         .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; }
         h2 { font-size: 1.2rem; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; color: var(--accent-color); }
+
+        /* Admin Bereich Styles */
+        .admin-toggle-wrapper { text-align: right; margin-top: 20px; }
+        .admin-toggle-btn { background: transparent; border: 1px dashed var(--border-color); color: var(--text-muted); padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s; }
+        .admin-toggle-btn:hover { color: var(--accent-color); border-color: var(--accent-color); }
+        .admin-card { background: #161b22; border: 1px solid var(--accent-color); border-radius: 12px; padding: 20px; margin-top: 20px; display: none; }
 
         /* Spiel-Item */
         .match-card-item { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 15px; margin-bottom: 10px; cursor: pointer; transition: background 0.15s; }
@@ -118,10 +106,6 @@
         tr.el-zone td:first-child { border-left: 4px solid #388bfd; }
         tr.relegation-zone td:first-child { border-left: 4px solid #f0883e; }
         tr.reflux-zone td:first-child { border-left: 4px solid #ff3333; }
-
-        tr.bayern-team { background: rgba(220, 5, 45, 0.12) !important; font-weight: bold; }
-        tr.bayern-team td { border-color: rgba(220, 5, 45, 0.4); }
-        .bayern-highlight { background: rgba(220, 5, 45, 0.15); border-left: 3px solid var(--bayern-red); padding-left: 6px; border-radius: 4px; }
 
         /* Modals */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center; padding: 20px; }
@@ -197,7 +181,7 @@
             <button onclick="changeMatchday(-1)">◄ Vorheriger</button>
             <select id="matchdaySelect" onchange="loadMatchday(this.value)"></select>
             <button onclick="changeMatchday(1)">Nächster ►</button>
-            <button onclick="subscribePush()" style="background: var(--accent-color); color: #000; font-weight: bold;">🔔 Tor-Alarm aktivieren</button>
+            <button onclick="subscribePush()" style="background: var(--accent-color); color: #000; font-weight: bold;">🔔 Supabase Tor-Alarm</button>
         </div>
 
         <!-- Hauptbereich -->
@@ -211,6 +195,19 @@
                 <h2>Tabelle <span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;">(Klicke auf ein Team für Saisonstatistiken)</span></h2>
                 <div id="tableContainer">Lade Tabelle...</div>
             </div>
+        </div>
+
+        <!-- ADMIN BEREICH -->
+        <div class="admin-card" id="adminCard">
+            <div style="font-weight: bold; color: var(--accent-color); margin-bottom: 12px; text-transform: uppercase; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+                <span>🔧 Supabase Push-Benachrichtigung testen (2. Liga)</span>
+                <span style="font-size: 0.7rem; color: #3fb950;">● Admin-Modus Aktiv</span>
+            </div>
+            <button style="background: #238636; width: 100%; font-weight: bold;" onclick="sendTestPush()">🚀 Test-Push Benachrichtigung senden</button>
+        </div>
+
+        <div class="admin-toggle-wrapper">
+            <button class="admin-toggle-btn" onclick="toggleAdminMode()">⚙️ Admin-Zugang</button>
         </div>
     </div>
 
@@ -255,9 +252,16 @@
     <div id="yellowCardsModal" class="modal"><div class="modal-content"><button class="close-btn" onclick="closeModal('yellowCardsModal')">&times;</button><div class="modal-header"><h2>🟨 Karten-Statistik</h2></div><div id="fullYellowCardsContainer">Lade...</div></div></div>
 
     <script>
+        const SUPABASE_URL = 'https://lhusylpjnujlqomougmg.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_yXEueWILvAq-Vm2VfTuYyg_BIQeE1KK';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
         const apiKey = "297322363f3bf16e1304cfb933a0c8d5";
         const leagueId = 79; // 2. Bundesliga ID
         const season = "2026";
+        const ADMIN_PIN = "1919";
+        let isAdmin = false;
+
         let currentMatchday = "";
         let globalTopScorers = [];
         let globalTopAssists = [];
@@ -288,10 +292,87 @@
             }
         }
 
-        function subscribePush() {
-            window.OneSignalDeferred.push(async function(OneSignal) {
-                try { await OneSignal.Slidedown.promptPush(); } catch (e) {}
-            });
+        function toggleAdminMode() {
+            const adminCard = document.getElementById('adminCard');
+            if (isAdmin) {
+                isAdmin = false;
+                adminCard.style.display = 'none';
+                return;
+            }
+            let enteredPin = prompt("Bitte Admin-PIN eingeben:");
+            if (enteredPin === ADMIN_PIN) {
+                isAdmin = true;
+                adminCard.style.display = 'block';
+                alert("Admin-Modus erfolgreich aktiviert!");
+            } else if (enteredPin !== null) {
+                alert("Falsche PIN!");
+            }
+        }
+
+        async function sendTestPush() {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        table: 'push_subscriptions_liga2',
+                        title: "⚽ 2. Liga Tor-Alarm (Test)",
+                        body: "Test-Alarm über Supabase Edge Function (liga2) erfolgreich ausgelöst!"
+                    })
+                });
+                if (response.ok) alert("Test-Push erfolgreich ausgelöst!");
+                else alert("Fehler von der Edge Function.");
+            } catch (e) {
+                alert("Netzwerkfehler: " + e.message);
+            }
+        }
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        async function subscribePush() {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                alert("Push-Benachrichtigungen werden von diesem Browser leider nicht unterstützt.");
+                return;
+            }
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    alert("Die Berechtigung für Benachrichtigungen wurde verweigert.");
+                    return;
+                }
+                const registration = await navigator.serviceWorker.register('./sw.js');
+                await registration.ready;
+
+                const publicVapidKey = 'BAsnfWgySLti5LzulXfN-xI-x7UDV32LO98YXgg1qdoRY1E1Tl05QPgCvOMgfwe80cSv_K7336-dhJTgBkHUI70';
+                const subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+                });
+
+                const p256dh = subscription.getKey('p256dh') ? btoa(String.fromCharCode.apply(null, new Uint8Array(subscription.getKey('p256dh')))) : '';
+                const auth = subscription.getKey('auth') ? btoa(String.fromCharCode.apply(null, new Uint8Array(subscription.getKey('auth')))) : '';
+
+                await supabaseClient.from('push_subscriptions_liga2').upsert({
+                    endpoint: subscription.endpoint,
+                    p256dh: p256dh,
+                    auth: auth
+                }, { onConflict: 'endpoint' });
+
+                alert("Supabase Push-Alarm (2. Liga) erfolgreich aktiviert!");
+            } catch (error) {
+                console.error('Fehler bei der Push-Registrierung:', error);
+                alert("Fehler beim Aktivieren der Benachrichtigung: " + error.message);
+            }
         }
 
         function showGoalAlert(teamName, scorerInfo, matchInfo) {
@@ -328,8 +409,7 @@
                         let p = globalTopScorers[i];
                         let goals = p.statistics[0].goals.total ?? 0;
                         let teamName = p.statistics[0].team.name;
-                        let isBayern = teamName.includes("Bayern");
-                        html += `<div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; padding:3px 0; border-bottom:1px solid var(--border-color);" class="${isBayern ? 'bayern-highlight' : ''}">
+                        html += `<div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; padding:3px 0; border-bottom:1px solid var(--border-color);">
                             <span><b>${i+1}.</b> ${p.player.name} <span style="color:var(--text-muted); font-size:0.75rem;">(${teamName})</span></span>
                             <span style="background:#21262d; padding:1px 6px; border-radius:4px; font-weight:bold; color:var(--accent-color);">${goals} Tore</span>
                         </div>`;
@@ -351,8 +431,7 @@
                         let p = globalTopAssists[i];
                         let assists = p.statistics[0].goals.assists ?? 0;
                         let teamName = p.statistics[0].team.name;
-                        let isBayern = teamName.includes("Bayern");
-                        html += `<div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; padding:3px 0; border-bottom:1px solid var(--border-color);" class="${isBayern ? 'bayern-highlight' : ''}">
+                        html += `<div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; padding:3px 0; border-bottom:1px solid var(--border-color);">
                             <span><b>${i+1}.</b> ${p.player.name} <span style="color:var(--text-muted); font-size:0.75rem;">(${teamName})</span></span>
                             <span style="background:#21262d; padding:1px 6px; border-radius:4px; font-weight:bold; color:var(--accent-color);">${assists} Assists</span>
                         </div>`;
@@ -374,8 +453,7 @@
                         let p = globalYellowCards[i];
                         let cards = p.statistics[0].cards.yellow ?? 0;
                         let teamName = p.statistics[0].team.name;
-                        let isBayern = teamName.includes("Bayern");
-                        html += `<div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; padding:3px 0; border-bottom:1px solid var(--border-color);" class="${isBayern ? 'bayern-highlight' : ''}">
+                        html += `<div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; padding:3px 0; border-bottom:1px solid var(--border-color);">
                             <span><b>${i+1}.</b> ${p.player.name} <span style="color:var(--text-muted); font-size:0.75rem;">(${teamName})</span></span>
                             <span style="background:#21262d; padding:1px 6px; border-radius:4px; font-weight:bold; color:#f0883e;">🟨 ${cards}</span>
                         </div>`;
@@ -441,8 +519,7 @@
             let html = `<table><tr><th>#</th><th>Spieler</th><th>Team</th><th class="center">Tore</th><th class="center">Elfm.</th></tr>`;
             globalTopScorers.forEach((p, index) => {
                 let stats = p.statistics[0];
-                let isBayern = stats.team.name.includes("Bayern");
-                html += `<tr class="${isBayern ? 'bayern-team' : ''}"><td><b>${index+1}</b></td><td><div style="display:flex; align-items:center; gap:6px;"><img src="${p.player.photo}" style="width:20px; height:20px; border-radius:50%; object-fit:cover;"><span>${p.player.name}</span></div></td><td><div style="display:flex; align-items:center; gap:6px;"><img src="${stats.team.logo}" style="width:16px; height:16px; object-fit:contain;"><span>${stats.team.name}</span></div></td><td class="center"><b>${stats.goals.total ?? 0}</b></td><td class="center">${stats.goals.penalty ?? 0}</td></tr>`;
+                html += `<tr><td><b>${index+1}</b></td><td><div style="display:flex; align-items:center; gap:6px;"><img src="${p.player.photo}" style="width:20px; height:20px; border-radius:50%; object-fit:cover;"><span>${p.player.name}</span></div></td><td><div style="display:flex; align-items:center; gap:6px;"><img src="${stats.team.logo}" style="width:16px; height:16px; object-fit:contain;"><span>${stats.team.name}</span></div></td><td class="center"><b>${stats.goals.total ?? 0}</b></td><td class="center">${stats.goals.penalty ?? 0}</td></tr>`;
             });
             document.getElementById("fullScorersContainer").innerHTML = html + `</table>`;
         }
@@ -452,8 +529,7 @@
             let html = `<table><tr><th>#</th><th>Spieler</th><th>Team</th><th class="center">Vorlagen</th></tr>`;
             globalTopAssists.forEach((p, index) => {
                 let stats = p.statistics[0];
-                let isBayern = stats.team.name.includes("Bayern");
-                html += `<tr class="${isBayern ? 'bayern-team' : ''}"><td><b>${index+1}</b></td><td><div style="display:flex; align-items:center; gap:6px;"><img src="${p.player.photo}" style="width:20px; height:20px; border-radius:50%; object-fit:cover;"><span>${p.player.name}</span></div></td><td><div style="display:flex; align-items:center; gap:6px;"><img src="${stats.team.logo}" style="width:16px; height:16px; object-fit:contain;"><span>${stats.team.name}</span></div></td><td class="center"><b>${stats.goals.assists ?? 0}</b></td></tr>`;
+                html += `<tr><td><b>${index+1}</b></td><td><div style="display:flex; align-items:center; gap:6px;"><img src="${p.player.photo}" style="width:20px; height:20px; border-radius:50%; object-fit:cover;"><span>${p.player.name}</span></div></td><td><div style="display:flex; align-items:center; gap:6px;"><img src="${stats.team.logo}" style="width:16px; height:16px; object-fit:contain;"><span>${stats.team.name}</span></div></td><td class="center"><b>${stats.goals.assists ?? 0}</b></td></tr>`;
             });
             document.getElementById("fullAssistsContainer").innerHTML = html + `</table>`;
         }
@@ -463,8 +539,7 @@
             let html = `<table><tr><th>#</th><th>Spieler</th><th>Team</th><th class="center">Gelb</th><th class="center">Gelb-Rot</th><th class="center">Rot</th></tr>`;
             globalYellowCards.forEach((p, index) => {
                 let stats = p.statistics[0];
-                let isBayern = stats.team.name.includes("Bayern");
-                html += `<tr class="${isBayern ? 'bayern-team' : ''}"><td><b>${index+1}</b></td><td><span>${p.player.name}</span></td><td><span>${stats.team.name}</span></td><td class="center"><b>${stats.cards.yellow ?? 0}</b></td><td class="center">${stats.cards.yellowred ?? 0}</td><td class="center">${stats.cards.red ?? 0}</td></tr>`;
+                html += `<tr><td><b>${index+1}</b></td><td><span>${p.player.name}</span></td><td><span>${stats.team.name}</span></td><td class="center"><b>${stats.cards.yellow ?? 0}</b></td><td class="center">${stats.cards.yellowred ?? 0}</td><td class="center">${stats.cards.red ?? 0}</td></tr>`;
             });
             document.getElementById("fullYellowCardsContainer").innerHTML = html + `</table>`;
         }
@@ -560,8 +635,7 @@
 
                         let dateDisplay = isLive ? `<span class="live-badge">LIVE ${m.fixture.status.elapsed || ''}'</span>` : (isFinished ? `<span style="color:var(--text-muted);">Beendet</span>` : new Date(m.fixture.date).toLocaleDateString("de-DE", { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }));
 
-                        let isBayernMatch = home.name.includes("Bayern") || away.name.includes("Bayern");
-                        tickerHtml += `<span class="ticker-item ${isBayernMatch ? 'bayern-ticker' : ''}"><img src="${home.logo}" class="ticker-team-logo">${home.name} <span class="ticker-score">${displayHome}:${displayAway}</span> ${away.name} <img src="${away.logo}" class="ticker-team-logo"></span>`;
+                        tickerHtml += `<span class="ticker-item"><img src="${home.logo}" class="ticker-team-logo">${home.name} <span class="ticker-score">${displayHome}:${displayAway}</span> ${away.name} <img src="${away.logo}" class="ticker-team-logo"></span>`;
 
                         let scorersHtml = "";
                         let goalEvents = events.filter(ev => ev.type === 'Goal');
@@ -576,7 +650,7 @@
                         }
 
                         const itemDiv = document.createElement("div");
-                        itemDiv.className = "match-card-item" + (isBayernMatch ? " bayern-highlight" : "");
+                        itemDiv.className = "match-card-item";
                         itemDiv.onclick = () => openMatchDetails(m.fixture.id);
                         itemDiv.innerHTML = `<div class="match-main-row"><div class="team home"><span>${home.name}</span><img src="${home.logo}"></div><div class="score-box"><div class="score">${displayHome} : ${displayAway}</div><span class="match-info-sub">${dateDisplay}</span></div><div class="team"><img src="${away.logo}"><span>${away.name}</span></div></div>${scorersHtml}`;
                         container.appendChild(itemDiv);
@@ -707,14 +781,12 @@
                     let top3Html = "";
                     for(let i = 0; i < Math.min(3, standings.length); i++) {
                         let s = standings[i];
-                        let isBayern = s.team.name.includes("Bayern");
-                        top3Html += `<div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; padding:3px 0; border-bottom:1px solid var(--border-color);" class="${isBayern ? 'bayern-highlight' : ''}"><div style="display:flex; align-items:center; gap:6px;"><b>${s.rank}.</b><img src="${s.team.logo}" style="width:16px; height:16px; object-fit:contain;"><span>${s.team.name}</span></div><span style="background:#21262d; padding:1px 6px; border-radius:4px; font-weight:bold; color:var(--accent-color);">${s.points} Pkt</span></div>`;
+                        top3Html += `<div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; padding:3px 0; border-bottom:1px solid var(--border-color);"><div style="display:flex; align-items:center; gap:6px;"><b>${s.rank}.</b><img src="${s.team.logo}" style="width:16px; height:16px; object-fit:contain;"><span>${s.team.name}</span></div><span style="background:#21262d; padding:1px 6px; border-radius:4px; font-weight:bold; color:var(--accent-color);">${s.points} Pkt</span></div>`;
                     }
                     document.getElementById("top3TableWidget").innerHTML = top3Html;
 
                     standings.forEach(s => {
                         let zoneClass = s.rank <= 2 ? "cl-zone" : (s.rank === 3 ? "el-zone" : (s.rank === 16 ? "relegation-zone" : (s.rank >= 17 ? "reflux-zone" : "")));
-                        if (s.team.name.includes("Bayern")) zoneClass += " bayern-team";
                         
                         html += `<tr class="table-row ${zoneClass}" onclick="openTeamStats(${s.team.id}, '${s.team.name}', '${s.team.logo}')">
                             <td><b>${s.rank}</b></td>
