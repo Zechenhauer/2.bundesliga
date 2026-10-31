@@ -317,7 +317,7 @@
                     mode: 'cors',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        table: 'push_subscription_liga2',
+                        table: 'push_subscriptions_liga2',
                         title: "⚽ 2. Liga Tor-Alarm (Test)",
                         body: "Test-Alarm über Supabase Edge Function (liga2) erfolgreich ausgelöst!"
                     })
@@ -363,7 +363,7 @@
                 const p256dh = subscription.getKey('p256dh') ? btoa(String.fromCharCode.apply(null, new Uint8Array(subscription.getKey('p256dh')))) : '';
                 const auth = subscription.getKey('auth') ? btoa(String.fromCharCode.apply(null, new Uint8Array(subscription.getKey('auth')))) : '';
 
-                await supabaseClient.from('push_subscription_liga2').upsert({
+                await supabaseClient.from('push_subscriptions_liga2').upsert({
                     endpoint: subscription.endpoint,
                     p256dh: p256dh,
                     auth: auth
@@ -413,7 +413,7 @@
                             mode: 'cors',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                table: 'push_subscription_liga2',
+                                table: 'push_subscriptions_liga2',
                                 title: `⚽ TOR! für ${scoringTeam} zum ${hScore}:${aScore}`,
                                 body: `Torschütze: ${cleanPlayer}${minStr}\n${home} : ${away}`
                             })
