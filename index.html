@@ -29,7 +29,7 @@
         .container { width: 100%; max-width: 950px; }
 
         header { text-align: center; margin-bottom: 20px; }
-        h1 { font-size: 2.2rem; color: var(--accent-color); margin-bottom: 5px; }
+        h1 { font-size: 2.2rem; color: var(--accent-color); margin-bottom: 5px; display: flex; align-items: center; justify-content: center; gap: 12px; }
         .subtitle { color: var(--text-muted); font-size: 0.95rem; }
         .author-sub { color: var(--accent-color); font-size: 0.8rem; font-weight: 500; margin-top: 4px; letter-spacing: 0.5px; text-transform: uppercase; }
 
@@ -148,7 +148,10 @@
         </div>
 
         <header>
-            <h1><img id="leagueLogoImg" src="" alt="3. Liga" style="height: 40px; width: 40px; border-radius: 50%; object-fit: cover; vertical-align: middle; margin-right: 10px; border: 1px solid var(--border-color); display:none;"> 2. Bundesliga</h1>
+            <h1>
+                <img src="https://media.api-sports.io/football/leagues/79.png" alt="2. Bundesliga Logo" style="height: 45px; width: 45px; object-fit: contain; vertical-align: middle;">
+                2. Bundesliga
+            </h1>
             <div class="subtitle">Live, Team-Statistiken, Aufstellungen & Bestenlisten (Saison 2026/27)</div>
             <div class="author-sub">
                 <img src="https://lhusylpjnujlqomougmg.supabase.co/storage/v1/object/public/Bilder/Juergen%20Schuetzendorf.png" alt="Jürgen Schützendorf" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover; border: 1px solid var(--accent-color); vertical-align: middle;">
