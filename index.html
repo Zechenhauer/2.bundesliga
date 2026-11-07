@@ -56,8 +56,13 @@
         /* Steuerung & Layout */
         .controls { display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 20px; background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); flex-wrap: wrap; }
         button, select { background: #21262d; color: var(--text-main); border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.95rem; transition: background 0.2s; }
-        button:hover, select:hover { background: #30363d; }
+        button:hover, select:hover { background: #30363d; border-color: var(--accent-color); }
         select { padding-right: 30px; }
+
+        /* Live Polling Schalter Styling */
+        .polling-toggle-btn { display: inline-flex; align-items: center; gap: 8px; font-weight: bold; }
+        .polling-toggle-btn.active { background: rgba(0, 255, 135, 0.15); border-color: var(--accent-color); color: var(--accent-color); }
+        .polling-toggle-btn.inactive { background: #21262d; border-color: var(--border-color); color: var(--text-muted); }
 
         .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .dash-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
@@ -94,7 +99,7 @@
 
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
         th, td { padding: 8px 8px; text-align: left; border-bottom: 1px solid var(--border-color); }
-        th { color: var(--text-muted); font-weight: 600; }
+        th { color: var(--text-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
         td.center, th.center { text-align: center; }
         td.right, th.right { text-align: right; }
         .table-row { cursor: pointer; transition: background 0.15s; }
@@ -187,6 +192,9 @@
             <button onclick="changeMatchday(-1)">◄ Vorheriger</button>
             <select id="matchdaySelect" onchange="loadMatchday(this.value)"></select>
             <button onclick="changeMatchday(1)">Nächster ►</button>
+            <button id="pollingToggleBtn" class="polling-toggle-btn active" onclick="toggleLivePolling()">
+                <span id="pollingIcon">🟢</span> Live-Polling: <span id="pollingStateText">An</span>
+            </button>
             <button onclick="subscribePush()" style="background: var(--accent-color); color: #000; font-weight: bold;">🔔 Supabase Tor-Alarm</button>
         </div>
 
@@ -209,7 +217,7 @@
                 <span>🔧 Supabase Push-Benachrichtigung testen (2. Liga)</span>
                 <span style="font-size: 0.7rem; color: #3fb950;">● Admin-Modus Aktiv</span>
             </div>
-            <button style="background: #238636; width: 100%; font-weight: bold;" onclick="sendTestPush()">🚀 Test-Push Benachrichtigung senden</button>
+            <button style="background: #238636; width: 100%; font-weight: bold; cursor: pointer;" onclick="sendTestPush()">🚀 Test-Push Benachrichtigung senden</button>
         </div>
 
         <div class="admin-toggle-wrapper">
@@ -274,6 +282,7 @@
         let globalYellowCards = [];
         let previousScores = {};
         let smartPollingInterval = null;
+        let isLivePollingEnabled = true;
         let recentGoalsList = JSON.parse(localStorage.getItem('liga2_recent_goals_cache') || '[]');
 
         // Globaler Spieler-Foto-Cache
@@ -312,6 +321,28 @@
                 fetchAndCachePlayerPhoto(playerId);
             }
             return `<img src="${photoUrl}" class="player-img-${playerId}" style="width:${size}; height:${size}; border-radius:50%; object-fit:cover; vertical-align:middle; margin-right:5px; ${!photoUrl ? 'display:none;' : ''}">`;
+        }
+
+        function toggleLivePolling() {
+            isLivePollingEnabled = !isLivePollingEnabled;
+            const btn = document.getElementById("pollingToggleBtn");
+            const icon = document.getElementById("pollingIcon");
+            const stateText = document.getElementById("pollingStateText");
+
+            if (isLivePollingEnabled) {
+                btn.className = "polling-toggle-btn active";
+                icon.textContent = "🟢";
+                stateText.textContent = "An";
+                if (currentMatchday) loadMatchday(currentMatchday, true);
+            } else {
+                btn.className = "polling-toggle-btn inactive";
+                icon.textContent = "🔴";
+                stateText.textContent = "Aus";
+                if (smartPollingInterval) {
+                    clearInterval(smartPollingInterval);
+                    smartPollingInterval = null;
+                }
+            }
         }
 
         async function init() {
@@ -519,10 +550,12 @@
                 smartPollingInterval = null;
             }
 
+            if (!isLivePollingEnabled) return;
+
             const pollingIntervalTime = hasLiveGames ? 60000 : 180000;
 
             smartPollingInterval = setInterval(() => {
-                if (currentMatchday) {
+                if (currentMatchday && isLivePollingEnabled) {
                     loadMatchday(currentMatchday, true);
                     loadTable();
                 }
@@ -883,14 +916,32 @@
                         tickerHtml += `<span class="ticker-item"><img src="${home.logo}" class="ticker-team-logo">${home.name} <span class="ticker-score">${displayHome}:${displayAway}</span> ${away.name} <img src="${away.logo}" class="ticker-team-logo"></span>`;
 
                         let scorersHtml = "";
-                        let goalEvents = events.filter(ev => ev.type === 'Goal');
-                        if (goalEvents.length > 0) {
+                        let relevantEvents = events.filter(ev => ev.type === 'Goal' || ev.type === 'Card');
+                        
+                        if (relevantEvents.length > 0) {
                             scorersHtml = `<div class="match-scorers-preview">`;
                             let cH = 0, cA = 0;
-                            goalEvents.forEach(ge => {
-                                if (ge.team.id === home.id) cH++; else cA++;
+                            
+                            relevantEvents.forEach(ge => {
                                 let photoHtml = getPlayerPhotoHtml(ge.player.id, '18px');
-                                scorersHtml += `<div class="scorer-tag"><span class="scorer-score-badge">${cH}:${cA}</span><span style="display:inline-flex; align-items:center;">${photoHtml}⚽ ${ge.time.elapsed}' ${ge.player.name}</span></div>`;
+                                
+                                if (ge.type === 'Goal') {
+                                    if (ge.team.id === home.id) cH++; else cA++;
+                                    scorersHtml += `<div class="scorer-tag"><span class="scorer-score-badge">${cH}:${cA}</span><span style="display:inline-flex; align-items:center;">${photoHtml}⚽ ${ge.time.elapsed}' ${ge.player.name}</span></div>`;
+                                } else if (ge.type === 'Card') {
+                                    let detail = (ge.detail || '').toLowerCase();
+                                    let comments = (ge.comments || '').toLowerCase();
+                                    let cIcon = '🟨';
+                                    
+                                    // Robuste Gelb-Rot-Erkennung
+                                    if (detail.includes('second yellow') || detail.includes('yellow/red') || detail.includes('yellowred') || (detail.includes('red') && detail.includes('yellow')) || comments.includes('yellow/red') || comments.includes('second yellow')) {
+                                        cIcon = '🟨🟥';
+                                    } else if (detail.includes('red') || comments.includes('red card')) {
+                                        cIcon = '🟥';
+                                    }
+                                    
+                                    scorersHtml += `<div class="scorer-tag" style="color:var(--text-muted);"><span style="display:inline-flex; align-items:center;">${photoHtml}${cIcon} ${ge.time.elapsed}' ${ge.player.name} (${ge.team.name.includes(home.name) ? home.name : away.name})</span></div>`;
+                                }
                             });
                             scorersHtml += `</div>`;
                         }
@@ -985,6 +1036,29 @@
                                 return `<span style="display:inline-flex; align-items:center; margin-right:6px;">${photoHtml}${p.player.name}</span>`;
                             }).join(", ") || "-";
 
+                            let teamEvents = (match.events || []).filter(ev => ev.team.id === teamObj.id);
+                            
+                            let subsEvents = teamEvents.filter(ev => ev.type === 'subst').map(ev => {
+                                let pInPhoto = getPlayerPhotoHtml(ev.player.id, '16px');
+                                let pOutPhoto = getPlayerPhotoHtml(ev.assist.id, '16px');
+                                return `<div style="font-size:0.8rem; color:var(--text-muted); display:flex; align-items:center; gap:4px;">🔄 ${ev.time.elapsed}' Ein: ${pInPhoto}${ev.player.name} | Aus: ${pOutPhoto}${ev.assist.name}</div>`;
+                            }).join("");
+
+                            let cardsEvents = teamEvents.filter(ev => ev.type === 'Card').map(ev => {
+                                let detail = (ev.detail || '').toLowerCase();
+                                let comments = (ev.comments || '').toLowerCase();
+                                let cIcon = '🟨';
+                                
+                                if (detail.includes('second yellow') || detail.includes('yellow/red') || detail.includes('yellowred') || (detail.includes('red') && detail.includes('yellow')) || comments.includes('yellow/red') || comments.includes('second yellow')) {
+                                    cIcon = '🟨🟥';
+                                } else if (detail.includes('red') || comments.includes('red card')) {
+                                    cIcon = '🟥';
+                                }
+                                
+                                let photoHtml = getPlayerPhotoHtml(ev.player.id, '16px');
+                                return `<div style="font-size:0.8rem; color:var(--text-muted); display:flex; align-items:center; gap:4px;">${cIcon} ${photoHtml} ${ev.time.elapsed}' ${ev.player.name}</div>`;
+                            }).join("");
+
                             return `
                                 <div style="background:#161b22; padding:12px; border-radius:8px; border:1px solid var(--border-color); flex:1;">
                                     <div style="font-weight:bold; color:var(--accent-color); margin-bottom:6px; display:flex; align-items:center; gap:6px;">
@@ -993,6 +1067,8 @@
                                     <div style="font-size:0.85rem; margin-bottom:6px;">Formation: <b>${lineupObj.formation || 'N/V'}</b> | Trainer: ${lineupObj.coach?.name || '-' }</div>
                                     <div style="font-size:0.82rem; margin-bottom:6px; color:var(--text-muted);"><b>Startelf:</b> ${start11}</div>
                                     <div style="font-size:0.82rem; margin-bottom:8px; color:var(--text-muted);"><b>Bank:</b> ${subs}</div>
+                                    ${subsEvents ? `<div style="margin-top:6px; border-top:1px dashed var(--border-color); padding-top:4px;"><b>Auswechslungen:</b>${subsEvents}</div>` : ''}
+                                    ${cardsEvents ? `<div style="margin-top:6px; border-top:1px dashed var(--border-color); padding-top:4px;"><b>Karten:</b>${cardsEvents}</div>` : ''}
                                 </div>
                             `;
                         }
