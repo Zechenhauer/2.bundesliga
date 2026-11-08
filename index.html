@@ -93,9 +93,22 @@
         .live-badge { background: var(--live-red); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; animation: pulse-live 1.5s infinite; display: inline-block; }
         @keyframes pulse-live { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
 
-        .match-scorers-preview { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border-color); font-size: 0.8rem; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        .scorer-tag { display: inline-flex; align-items: center; gap: 6px; background: #161b22; padding: 3px 10px; border-radius: 4px; border: 1px solid var(--border-color); width: 100%; max-width: 400px; justify-content: center; }
-        .scorer-score-badge { font-weight: bold; color: var(--accent-color); background: #21262d; padding: 1px 6px; border-radius: 3px; font-size: 0.75rem; }
+        /* Grafische Timeline direkt unter dem Spiel auf der Hauptseite */
+        .match-timeline-preview { position: relative; margin: 12px 0 8px 0; padding: 10px 5px; overflow-x: auto; background: #161b22; border-radius: 6px; border: 1px solid var(--border-color); }
+        .match-timeline-axis { position: absolute; top: 44px; left: 15px; right: 15px; height: 2px; background: var(--border-color); z-index: 1; }
+        .match-timeline-nodes { display: flex; gap: 18px; position: relative; z-index: 2; padding: 0 5px; width: max-content; align-items: flex-start; }
+        .match-timeline-node { display: flex; flex-direction: column; align-items: center; text-align: center; width: 84px; flex-shrink: 0; }
+        
+        .match-timeline-node.is-goal .match-timeline-player-img { border: 2px solid var(--accent-color); box-shadow: 0 0 10px rgba(0, 255, 135, 0.6); }
+        .match-timeline-node.is-goal .match-timeline-badge-mini { background: var(--accent-color); color: #000; font-weight: bold; font-size: 0.65rem; width: auto; padding: 0 6px; border-radius: 10px; bottom: -4px; right: -12px; box-shadow: 0 0 6px rgba(0, 255, 135, 0.8); white-space: nowrap; }
+        .match-timeline-node.is-goal .match-timeline-player { color: var(--accent-color); text-shadow: 0 0 4px rgba(0, 255, 135, 0.3); }
+
+        .match-timeline-avatar-container { position: relative; width: 32px; height: 32px; margin-bottom: 4px; z-index: 3; }
+        .match-timeline-player-img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-color); background: #21262d; }
+        .match-timeline-badge-mini { position: absolute; bottom: -2px; right: -2px; background: #0f1115; border: 1px solid var(--border-color); border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 0.55rem; }
+        .match-timeline-minute { font-size: 0.65rem; color: var(--text-muted); background: #21262d; padding: 1px 5px; border-radius: 4px; margin-bottom: 3px; font-weight: bold; }
+        .match-timeline-player { font-size: 0.68rem; font-weight: bold; color: var(--text-main); line-height: 1.1; word-break: break-word; max-width: 84px; }
+        .match-timeline-team { font-size: 0.6rem; color: var(--text-muted); margin-top: 2px; display: flex; align-items: center; justify-content: center; gap: 2px; }
 
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
         th, td { padding: 8px 8px; text-align: left; border-bottom: 1px solid var(--border-color); }
@@ -121,9 +134,22 @@
         .modal-teams { display: flex; justify-content: space-around; align-items: center; font-size: 1.1rem; font-weight: bold; margin-bottom: 8px; }
         .modal-teams img { width: 35px; height: 35px; object-fit: contain; }
         
-        .event-item { display: flex; align-items: center; justify-content: space-between; font-size: 0.88rem; padding: 6px 10px; border-bottom: 1px solid var(--border-color); color: var(--text-main); background: #161b22; margin-bottom: 5px; border-radius: 6px; }
-        .event-time { font-weight: bold; color: var(--accent-color); min-width: 35px; }
-        .event-score { background: #21262d; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; }
+        /* Grafische Timeline im Modal */
+        .timeline-wrapper { position: relative; margin: 25px 0 15px 0; padding: 15px 10px; overflow-x: auto; background: #161b22; border-radius: 8px; border: 1px solid var(--border-color); }
+        .timeline-axis { position: absolute; top: 58px; left: 20px; right: 20px; height: 3px; background: var(--border-color); z-index: 1; }
+        .timeline-nodes { display: flex; gap: 25px; position: relative; z-index: 2; padding: 0 10px; width: max-content; align-items: flex-start; }
+        .timeline-node { display: flex; flex-direction: column; align-items: center; text-align: center; width: 100px; flex-shrink: 0; }
+        
+        .timeline-node.is-goal .timeline-player-img { border: 2px solid var(--accent-color); box-shadow: 0 0 12px rgba(0, 255, 135, 0.7); }
+        .timeline-node.is-goal .timeline-badge-mini { background: var(--accent-color); color: #000; font-weight: bold; font-size: 0.7rem; width: auto; padding: 0 8px; border-radius: 10px; bottom: -4px; right: -15px; box-shadow: 0 0 8px rgba(0, 255, 135, 0.9); white-space: nowrap; }
+        .timeline-node.is-goal .timeline-player { color: var(--accent-color); text-shadow: 0 0 6px rgba(0, 255, 135, 0.4); }
+
+        .timeline-avatar-container { position: relative; width: 38px; height: 38px; margin-bottom: 6px; z-index: 3; }
+        .timeline-player-img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-color); background: #21262d; }
+        .timeline-badge-mini { position: absolute; bottom: -2px; right: -2px; background: #0f1115; border: 1px solid var(--border-color); border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; }
+        .timeline-minute { font-size: 0.7rem; color: var(--text-muted); background: #21262d; padding: 1px 6px; border-radius: 4px; margin-bottom: 4px; font-weight: bold; }
+        .timeline-player { font-size: 0.72rem; font-weight: bold; color: var(--text-main); line-height: 1.2; word-break: break-word; max-width: 100px; }
+        .timeline-team { font-size: 0.65rem; color: var(--text-muted); margin-top: 3px; display: flex; align-items: center; justify-content: center; gap: 3px; }
         
         .stat-row { margin-bottom: 10px; font-size: 0.85rem; }
         .stat-info { display: flex; justify-content: space-between; margin-bottom: 3px; color: var(--text-muted); font-weight: 500; }
@@ -235,7 +261,7 @@
                 <div id="modalReferee" style="color: var(--accent-color); font-size: 0.8rem;"></div>
             </div>
             <div style="margin-top: 15px;">
-                <h3 style="font-size: 1rem; color: var(--accent-color); margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px;">Tore & Spielverlauf</h3>
+                <h3 style="font-size: 1rem; color: var(--accent-color); margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px;">Grafischer Spielverlauf (Timeline)</h3>
                 <div id="modalEvents">Lade Spieldetails...</div>
             </div>
             <div style="margin-top: 20px;">
@@ -887,7 +913,7 @@
                         const home = m.teams.home;
                         const away = m.teams.away;
                         const goalsHome = m.goals.home ?? 0;
-                        const goalsAway = m.goals.away ?? 0;
+                        const goalsAway = m.goals.second ?? m.goals.away ?? 0;
 
                         let isLive = ["1H", "2H", "ET", "P", "HT"].includes(m.fixture.status.short);
                         if (isLive) hasLiveGames = true;
@@ -915,6 +941,62 @@
 
                         tickerHtml += `<span class="ticker-item"><img src="${home.logo}" class="ticker-team-logo">${home.name} <span class="ticker-score">${displayHome}:${displayAway}</span> ${away.name} <img src="${away.logo}" class="ticker-team-logo"></span>`;
 
+                        // Grafische Timeline (Nur Tore und Karten) direkt im Spielkasten
+                        let matchTimelineHtml = "";
+                        let relevantTimelineEvents = events.filter(ev => ['Goal', 'Card'].includes(ev.type));
+                        
+                        if (relevantTimelineEvents.length > 0) {
+                            matchTimelineHtml = `<div class="match-timeline-preview"><div class="match-timeline-axis"></div><div class="match-timeline-nodes">`;
+                            let tH = 0, tA = 0;
+
+                            relevantTimelineEvents.forEach(ev => {
+                                let isGoal = ev.type === 'Goal';
+                                let icon = '⚽';
+
+                                if (isGoal) {
+                                    if (ev.team.id === home.id) tH++; else tA++;
+                                    icon = `⚽ ${tH}:${tA}`;
+                                } else if (ev.type === 'Card') {
+                                    let detail = (ev.detail || '').toLowerCase();
+                                    let comments = (ev.comments || '').toLowerCase();
+                                    if (detail.includes('second yellow') || detail.includes('yellow/red') || detail.includes('yellowred') || (detail.includes('red') && detail.includes('yellow')) || comments.includes('yellow/red')) {
+                                        icon = '🟨🟥';
+                                    } else if (detail.includes('red') || comments.includes('red card')) {
+                                        icon = '🟥';
+                                    } else {
+                                        icon = '🟨';
+                                    }
+                                }
+
+                                let playerId = ev.player ? ev.player.id : null;
+                                let playerName = ev.player ? ev.player.name : '';
+                                let photoUrl = playerId ? (playerPhotoCache[playerId] || '') : '';
+                                if (playerId && !photoUrl) {
+                                    fetchAndCachePlayerPhoto(playerId);
+                                }
+
+                                let isHomeEv = ev.team.id === home.id;
+                                let teamLogo = isHomeEv ? home.logo : away.logo;
+                                let teamNameShort = isHomeEv ? home.name : away.name;
+
+                                matchTimelineHtml += `
+                                    <div class="match-timeline-node ${isGoal ? 'is-goal' : ''}">
+                                        <div class="match-timeline-minute">${ev.time.elapsed}'</div>
+                                        <div class="match-timeline-avatar-container">
+                                            <img src="${photoUrl || 'https://via.placeholder.com/32'}" class="match-timeline-player-img player-img-${playerId}" alt="${playerName}">
+                                            <div class="match-timeline-badge-mini" title="${isGoal ? 'Torstand: ' + tH + ':' + tA : 'Aktion'}">${icon}</div>
+                                        </div>
+                                        <div class="match-timeline-player" title="${playerName}">${playerName}</div>
+                                        <div class="match-timeline-team">
+                                            <img src="${teamLogo}" style="width:12px; height:12px; object-fit:contain;" alt="${teamNameShort}">
+                                            <span>${isHomeEv ? 'Heim' : 'Gast'}</span>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                            matchTimelineHtml += `</div></div>`;
+                        }
+
                         let scorersHtml = "";
                         let relevantEvents = events.filter(ev => ev.type === 'Goal' || ev.type === 'Card');
                         
@@ -933,7 +1015,6 @@
                                     let comments = (ge.comments || '').toLowerCase();
                                     let cIcon = '🟨';
                                     
-                                    // Robuste Gelb-Rot-Erkennung
                                     if (detail.includes('second yellow') || detail.includes('yellow/red') || detail.includes('yellowred') || (detail.includes('red') && detail.includes('yellow')) || comments.includes('yellow/red') || comments.includes('second yellow')) {
                                         cIcon = '🟨🟥';
                                     } else if (detail.includes('red') || comments.includes('red card')) {
@@ -949,7 +1030,15 @@
                         const itemDiv = document.createElement("div");
                         itemDiv.className = "match-card-item";
                         itemDiv.onclick = () => openMatchDetails(m.fixture.id);
-                        itemDiv.innerHTML = `<div class="match-main-row"><div class="team home"><span>${home.name}</span><img src="${home.logo}"></div><div class="score-box"><div class="score">${displayHome} : ${displayAway}</div><span class="match-info-sub">${dateDisplay}</span></div><div class="team"><img src="${away.logo}"><span>${away.name}</span></div></div>${scorersHtml}`;
+                        itemDiv.innerHTML = `
+                            <div class="match-main-row">
+                                <div class="team home"><span>${home.name}</span><img src="${home.logo}"></div>
+                                <div class="score-box"><div class="score">${displayHome} : ${displayAway}</div><span class="match-info-sub">${dateDisplay}</span></div>
+                                <div class="team"><img src="${away.logo}"><span>${away.name}</span></div>
+                            </div>
+                            ${matchTimelineHtml}
+                            ${scorersHtml}
+                        `;
                         container.appendChild(itemDiv);
                     });
                     document.getElementById('tickerTrack').innerHTML = tickerHtml + tickerHtml;
@@ -963,7 +1052,7 @@
             const modal = document.getElementById("matchModal");
             modal.style.display = "flex";
             document.getElementById("modalTeamsHeader").innerHTML = "Lade Spieldetails...";
-            document.getElementById("modalEvents").innerHTML = "Lade Tore...";
+            document.getElementById("modalEvents").innerHTML = "Lade Spielverlauf (Timeline)...";
             document.getElementById("modalLineups").innerHTML = "Lade Aufstellungen, Wechsel & Karten...";
             document.getElementById("modalStats").innerHTML = "Lade Statistiken...";
             document.getElementById("modalStatus").textContent = "";
@@ -1002,18 +1091,65 @@
                     document.getElementById("modalStatus").textContent = `Status: ${match.fixture.status.long}`;
                     if (match.fixture.referee) document.getElementById("modalReferee").textContent = `👨‍⚖️ Schiedsrichter: ${match.fixture.referee}`;
 
-                    let evHtml = "";
+                    // Grafische Timeline im Modal (Tore, Karten, Wechsel)
+                    let timelineHtml = "Keine Ereignisse vorhanden.";
                     if (match.events && match.events.length > 0) {
-                        let hG = 0, aG = 0;
-                        match.events.forEach(ev => {
-                            if (ev.type === 'Goal') {
-                                if (ev.team.id === home.id) hG++; else aG++;
-                                let photoHtml = getPlayerPhotoHtml(ev.player.id, '20px');
-                                evHtml += `<div class="event-item"><div style="display:flex; align-items:center; gap:10px;"><span class="event-time">${ev.time.elapsed}'</span><span style="display:flex; align-items:center;">${photoHtml}⚽ <b>${ev.player.name}</b> (${ev.team.name})</span></div><span class="event-score">${hG}:${aG}</span></div>`;
-                            }
-                        });
+                        let filteredEvents = match.events.filter(ev => ['Goal', 'Card', 'subst'].includes(ev.type));
+                        if (filteredEvents.length > 0) {
+                            timelineHtml = `<div class="timeline-wrapper"><div class="timeline-axis"></div><div class="timeline-nodes">`;
+                            let tH = 0, tA = 0;
+
+                            filteredEvents.forEach(ev => {
+                                let isGoal = ev.type === 'Goal';
+                                let icon = '⚽';
+
+                                if (isGoal) {
+                                    if (ev.team.id === home.id) tH++; else tA++;
+                                    icon = `⚽ ${tH}:${tA}`;
+                                } else if (ev.type === 'Card') {
+                                    let detail = (ev.detail || '').toLowerCase();
+                                    let comments = (ev.comments || '').toLowerCase();
+                                    if (detail.includes('second yellow') || detail.includes('yellow/red') || detail.includes('yellowred') || (detail.includes('red') && detail.includes('yellow')) || comments.includes('yellow/red')) {
+                                        icon = '🟨🟥';
+                                    } else if (detail.includes('red') || comments.includes('red card')) {
+                                        icon = '🟥';
+                                    } else {
+                                        icon = '🟨';
+                                    }
+                                } else if (ev.type === 'subst') {
+                                    icon = '🔄';
+                                }
+
+                                let playerId = ev.player ? ev.player.id : null;
+                                let playerName = ev.player ? ev.player.name : '';
+                                let photoUrl = playerId ? (playerPhotoCache[playerId] || '') : '';
+                                if (playerId && !photoUrl) {
+                                    fetchAndCachePlayerPhoto(playerId);
+                                }
+
+                                let isHome = ev.team.id === home.id;
+                                let teamLogo = isHome ? home.logo : away.logo;
+                                let teamNameShort = isHome ? home.name : away.name;
+
+                                timelineHtml += `
+                                    <div class="timeline-node ${isGoal ? 'is-goal' : ''}">
+                                        <div class="timeline-minute">${ev.time.elapsed}'</div>
+                                        <div class="timeline-avatar-container">
+                                            <img src="${photoUrl || 'https://via.placeholder.com/38'}" class="timeline-player-img player-img-${playerId}" alt="${playerName}">
+                                            <div class="timeline-badge-mini" title="${isGoal ? 'Torstand: ' + tH + ':' + tA : 'Aktion'}">${icon}</div>
+                                        </div>
+                                        <div class="timeline-player" title="${playerName}">${playerName}</div>
+                                        <div class="timeline-team">
+                                            <img src="${teamLogo}" style="width:14px; height:14px; object-fit:contain;" alt="${teamNameShort}">
+                                            <span>${isHome ? 'Heim' : 'Gast'}</span>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                            timelineHtml += `</div></div>`;
+                        }
                     }
-                    document.getElementById("modalEvents").innerHTML = evHtml !== "" ? evHtml : "Für dieses Spiel sind keine Tor-Events hinterlegt.";
+                    document.getElementById("modalEvents").innerHTML = timelineHtml;
 
                     let lineupsHtml = "Aufstellungen für dieses Spiel nicht verfügbar.";
                     if (lineupsData && lineupsData.response && lineupsData.response.length === 2) {
@@ -1038,10 +1174,11 @@
 
                             let teamEvents = (match.events || []).filter(ev => ev.team.id === teamObj.id);
                             
+                            // Korrigierte Auswechslungs-Zuordnung (ev.assist = Ein, ev.player = Aus)
                             let subsEvents = teamEvents.filter(ev => ev.type === 'subst').map(ev => {
-                                let pInPhoto = getPlayerPhotoHtml(ev.player.id, '16px');
-                                let pOutPhoto = getPlayerPhotoHtml(ev.assist.id, '16px');
-                                return `<div style="font-size:0.8rem; color:var(--text-muted); display:flex; align-items:center; gap:4px;">🔄 ${ev.time.elapsed}' Ein: ${pInPhoto}${ev.player.name} | Aus: ${pOutPhoto}${ev.assist.name}</div>`;
+                                let pInPhoto = getPlayerPhotoHtml(ev.assist?.id, '16px');
+                                let pOutPhoto = getPlayerPhotoHtml(ev.player?.id, '16px');
+                                return `<div style="font-size:0.8rem; color:var(--text-muted); display:flex; align-items:center; gap:4px;">🔄 ${ev.time.elapsed}' Ein: ${pInPhoto}${ev.assist?.name || ''} | Aus: ${pOutPhoto}${ev.player?.name || ''}</div>`;
                             }).join("");
 
                             let cardsEvents = teamEvents.filter(ev => ev.type === 'Card').map(ev => {
