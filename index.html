@@ -110,6 +110,11 @@
         .match-timeline-player { font-size: 0.68rem; font-weight: bold; color: var(--text-main); line-height: 1.1; word-break: break-word; max-width: 84px; }
         .match-timeline-team { font-size: 0.6rem; color: var(--text-muted); margin-top: 2px; display: flex; align-items: center; justify-content: center; gap: 2px; }
 
+        /* 1:1 Anpassung der Torschützen-Leiste im 1. Bundesliga Stil */
+        .match-scorers-preview { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+        .scorer-tag { display: flex; align-items: center; justify-content: center; background: #161b22; border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 12px; font-size: 0.85rem; gap: 10px; width: fit-content; margin: 0 auto; }
+        .scorer-score-badge { background: #21262d; color: var(--accent-color); font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; border: 1px solid var(--border-color); }
+
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
         th, td { padding: 8px 8px; text-align: left; border-bottom: 1px solid var(--border-color); }
         th { color: var(--text-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
@@ -1019,32 +1024,18 @@
                             matchTimelineHtml += `</div></div>`;
                         }
 
+                        // HIER DIE ANPASSUNG: Nur noch Tore (Goal) für die Text-Liste unter dem Spiel übernehmen (genau wie in der 1. Bundesliga)
                         let scorersHtml = "";
-                        let relevantEvents = events.filter(ev => ev.type === 'Goal' || ev.type === 'Card');
+                        let goalEvents = events.filter(ev => ev.type === 'Goal');
                         
-                        if (relevantEvents.length > 0) {
+                        if (goalEvents.length > 0) {
                             scorersHtml = `<div class="match-scorers-preview">`;
                             let cH = 0, cA = 0;
                             
-                            relevantEvents.forEach(ge => {
+                            goalEvents.forEach(ge => {
+                                if (ge.team.id === home.id) cH++; else cA++;
                                 let photoHtml = getPlayerPhotoHtml(ge.player.id, '18px');
-                                
-                                if (ge.type === 'Goal') {
-                                    if (ge.team.id === home.id) cH++; else cA++;
-                                    scorersHtml += `<div class="scorer-tag"><span class="scorer-score-badge">${cH}:${cA}</span><span style="display:inline-flex; align-items:center;">${photoHtml}⚽ ${ge.time.elapsed}' ${ge.player.name}</span></div>`;
-                                } else if (ge.type === 'Card') {
-                                    let detail = (ge.detail || '').toLowerCase();
-                                    let comments = (ge.comments || '').toLowerCase();
-                                    let cIcon = '🟨';
-                                    
-                                    if (detail.includes('second yellow') || detail.includes('yellow/red') || detail.includes('yellowred') || (detail.includes('red') && detail.includes('yellow')) || comments.includes('yellow/red') || comments.includes('second yellow')) {
-                                        cIcon = '🟨🟥';
-                                    } else if (detail.includes('red') || comments.includes('red card')) {
-                                        cIcon = '🟥';
-                                    }
-                                    
-                                    scorersHtml += `<div class="scorer-tag" style="color:var(--text-muted);"><span style="display:inline-flex; align-items:center;">${photoHtml}${cIcon} ${ge.time.elapsed}' ${ge.player.name} (${ge.team.name.includes(home.name) ? home.name : away.name})</span></div>`;
-                                }
+                                scorersHtml += `<div class="scorer-tag"><span class="scorer-score-badge">${cH}:${cA}</span><span style="display:inline-flex; align-items:center;">${photoHtml}⚽ ${ge.time.elapsed}' ${ge.player.name}</span></div>`;
                             });
                             scorersHtml += `</div>`;
                         }
