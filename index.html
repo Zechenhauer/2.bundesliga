@@ -311,6 +311,9 @@
         let isLivePollingEnabled = true;
         let recentGoalsList = JSON.parse(localStorage.getItem('liga2_recent_goals_cache') || '[]');
 
+        // OPTIMIERUNG 1: Lokaler Cache für beendete Spiele (localStorage)
+        let fixtureDetailsCache = JSON.parse(localStorage.getItem('liga2_fixture_details_cache') || '{}');
+
         // Globaler Spieler-Foto-Cache
         let playerPhotoCache = JSON.parse(localStorage.getItem('liga2_player_photo_cache') || '{}');
 
@@ -374,7 +377,7 @@
         async function init() {
             await checkApiStatus();
             await loadRounds();
-            loadTable();
+            loadTable(); // Initialer Tabellen-Aufruf (Optimierung 3)
             loadTopScorers();
             loadTopAssists();
             loadYellowCards();
@@ -483,7 +486,8 @@
             let uniqueGoalId = `liga2_${matchId}_${hScore}:${aScore}_${latestScorer}`;
             
             let cleanPlayer = latestScorer.replace(/⚽\s*/, '').replace(/\(\d+['']\)/, '').replace('(Pen)', '').replace('(ET)', '').trim();
-            let minStr = latestScorer.match(/\(\d+['']\)/) ? ` ${latestScorer.match(/\(\d+['']\)/)[0]}` : '';
+            let minMatch = latestScorer.match(/\(\d+['']\)/);
+            let minStr = minMatch ? ` ${minMatch[0]}` : '';
 
             let goalObject = {
                 id: uniqueGoalId,
@@ -570,6 +574,7 @@
 
         function hideGoalAlert() { document.getElementById("goalAlertBanner").style.display = "none"; }
 
+        // OPTIMIERUNG 2: Polling-Intervall auf 60s gesetzt (bzw. 120s wenn keine Live-Spiele)
         function manageSmartPolling(hasLiveGames) {
             if (smartPollingInterval) {
                 clearInterval(smartPollingInterval);
@@ -578,12 +583,12 @@
 
             if (!isLivePollingEnabled) return;
 
-            const pollingIntervalTime = hasLiveGames ? 60000 : 180000;
+            const pollingIntervalTime = hasLiveGames ? 60000 : 120000;
 
             smartPollingInterval = setInterval(() => {
                 if (currentMatchday && isLivePollingEnabled) {
                     loadMatchday(currentMatchday, true);
-                    loadTable();
+                    // HINWEIS (Optimierung 3): loadTable() wird hier im Hintergrund-Polling bewusst NICHT mit aufgerufen, um API-Quote zu sparen!
                 }
             }, pollingIntervalTime);
         }
@@ -895,13 +900,30 @@
                     
                     const matchPromises = data.response.map(async m => {
                         const fixtureId = m.fixture.id;
+                        let statusShort = m.fixture.status.short;
+                        let isFinished = ["FT", "AET", "PEN"].includes(statusShort);
                         let events = m.events || [];
-                        if (events.length === 0 && ['FT', '1H', '2H', 'ET', 'P', 'HT'].includes(m.fixture.status.short)) {
-                            try {
-                                const evRes = await fetch(`https://v3.football.api-sports.io/fixtures?id=${fixtureId}`, { headers: { "x-apisports-key": apiKey } });
-                                const evData = await evRes.json();
-                                if(evData.response) events = evData.response[0].events || [];
-                            } catch(err) {}
+
+                        // OPTIMIERUNG 1: Lokalen Cache für beendete Spiele prüfen
+                        if (isFinished && fixtureDetailsCache[fixtureId]) {
+                            events = fixtureDetailsCache[fixtureId].events || [];
+                        } else {
+                            if (events.length === 0 && ['FT', '1H', '2H', 'ET', 'P', 'HT'].includes(statusShort)) {
+                                try {
+                                    const evRes = await fetch(`https://v3.football.api-sports.io/fixtures?id=${fixtureId}`, { headers: { "x-apisports-key": apiKey } });
+                                    const evData = await evRes.json();
+                                    if(evData.response) {
+                                        events = evData.response[0].events || [];
+                                        if (isFinished) {
+                                            fixtureDetailsCache[fixtureId] = { events: events };
+                                            localStorage.setItem('liga2_fixture_details_cache', JSON.stringify(fixtureDetailsCache));
+                                        }
+                                    }
+                                } catch(err) {}
+                            } else if (isFinished && events.length > 0 && !fixtureDetailsCache[fixtureId]) {
+                                fixtureDetailsCache[fixtureId] = { events: events };
+                                localStorage.setItem('liga2_fixture_details_cache', JSON.stringify(fixtureDetailsCache));
+                            }
                         }
                         return { match: m, events: events };
                     });
@@ -1174,7 +1196,6 @@
 
                             let teamEvents = (match.events || []).filter(ev => ev.team.id === teamObj.id);
                             
-                            // Korrigierte Auswechslungs-Zuordnung (ev.assist = Ein, ev.player = Aus)
                             let subsEvents = teamEvents.filter(ev => ev.type === 'subst').map(ev => {
                                 let pInPhoto = getPlayerPhotoHtml(ev.assist?.id, '16px');
                                 let pOutPhoto = getPlayerPhotoHtml(ev.player?.id, '16px');
@@ -1256,48 +1277,46 @@
         }
 
         async function loadTable() {
-        const container = document.getElementById("tableContainer");
-        try {
-            const res = await fetch(`https://v3.football.api-sports.io/standings?league=${leagueId}&season=${season}`, { headers: { "x-apisports-key": apiKey } });
-            const data = await res.json();
-            if(data.response && data.response.length > 0) {
-                const standings = data.response[0].league.standings[0];
-                
-                // Erweiterte Kopfzeile mit S, U, N
-                let html = `<table><tr><th>#</th><th>Team</th><th class="center">Sp</th><th class="center">S</th><th class="center">U</th><th class="center">N</th><th class="center">Tore</th><th class="center">Diff</th><th class="right">Pkt</th></tr>`;
-                
-                let top3Html = "";
-                for(let i = 0; i < Math.min(3, standings.length); i++) {
-                    let s = standings[i];
-                    let isBayern = s.team.name.includes("Bayern");
-                    top3Html += `<div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; padding:3px 0; border-bottom:1px solid var(--border-color);" class="${isBayern ? 'bayern-highlight' : ''}"><div style="display:flex; align-items:center; gap:6px;"><b>${s.rank}.</b><img src="${s.team.logo}" style="width:16px; height:16px; object-fit:contain;"><span>${s.team.name}</span></div><span style="background:#21262d; padding:1px 6px; border-radius:4px; font-weight:bold; color:var(--accent-color);">${s.points} Pkt</span></div>`;
-                }
-                document.getElementById("top3TableWidget").innerHTML = top3Html;
+            const container = document.getElementById("tableContainer");
+            try {
+                const res = await fetch(`https://v3.football.api-sports.io/standings?league=${leagueId}&season=${season}`, { headers: { "x-apisports-key": apiKey } });
+                const data = await res.json();
+                if(data.response && data.response.length > 0) {
+                    const standings = data.response[0].league.standings[0];
+                    
+                    let html = `<table><tr><th>#</th><th>Team</th><th class="center">Sp</th><th class="center">S</th><th class="center">U</th><th class="center">N</th><th class="center">Tore</th><th class="center">Diff</th><th class="right">Pkt</th></tr>`;
+                    
+                    let top3Html = "";
+                    for(let i = 0; i < Math.min(3, standings.length); i++) {
+                        let s = standings[i];
+                        let isBayern = s.team.name.includes("Bayern");
+                        top3Html += `<div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85rem; padding:3px 0; border-bottom:1px solid var(--border-color);" class="${isBayern ? 'bayern-highlight' : ''}"><div style="display:flex; align-items:center; gap:6px;"><b>${s.rank}.</b><img src="${s.team.logo}" style="width:16px; height:16px; object-fit:contain;"><span>${s.team.name}</span></div><span style="background:#21262d; padding:1px 6px; border-radius:4px; font-weight:bold; color:var(--accent-color);">${s.points} Pkt</span></div>`;
+                    }
+                    document.getElementById("top3TableWidget").innerHTML = top3Html;
 
-                standings.forEach(s => {
-                    let zoneClass = s.rank <= 4 ? "cl-zone" : (s.rank <= 6 ? "el-zone" : (s.rank === 16 ? "relegation-zone" : (s.rank >= 17 ? "reflux-zone" : "")));
-                    if (s.team.name.includes("Bayern")) zoneClass += " bayern-team";
-                    
-                    let diffValue = s.goalsDiff !== undefined ? s.goalsDiff : (s.all.goals.for - s.all.goals.against);
-                    let diffFormatted = diffValue > 0 ? '+' + diffValue : diffValue;
-                    
-                    // Zeilendaten passend zur neuen Kopfzeile
-                    html += `<tr class="table-row ${zoneClass}" onclick="openTeamStats(${s.team.id}, '${s.team.name}', '${s.team.logo}')">
-                        <td><b>${s.rank}</b></td>
-                        <td><div class="table-team"><img src="${s.team.logo}"><span>${s.team.name}</span></div></td>
-                        <td class="center">${s.all.played}</td>
-                        <td class="center">${s.all.win}</td>
-                        <td class="center">${s.all.draw}</td>
-                        <td class="center">${s.all.lose}</td>
-                        <td class="center">${s.all.goals.for}:${s.all.goals.against}</td>
-                        <td class="center">${diffFormatted}</td>
-                        <td class="right"><b>${s.points}</b></td>
-                    </tr>`;
-                });
-                container.innerHTML = html + `</table>`;
-            }
-        } catch(e) {}
-    }
+                    standings.forEach(s => {
+                        let zoneClass = s.rank <= 4 ? "cl-zone" : (s.rank <= 6 ? "el-zone" : (s.rank === 16 ? "relegation-zone" : (s.rank >= 17 ? "reflux-zone" : "")));
+                        if (s.team.name.includes("Bayern")) zoneClass += " bayern-team";
+                        
+                        let diffValue = s.goalsDiff !== undefined ? s.goalsDiff : (s.all.goals.for - s.all.goals.against);
+                        let diffFormatted = diffValue > 0 ? '+' + diffValue : diffValue;
+                        
+                        html += `<tr class="table-row ${zoneClass}" onclick="openTeamStats(${s.team.id}, '${s.team.name}', '${s.team.logo}')">
+                            <td><b>${s.rank}</b></td>
+                            <td><div class="table-team"><img src="${s.team.logo}"><span>${s.team.name}</span></div></td>
+                            <td class="center">${s.all.played}</td>
+                            <td class="center">${s.all.win}</td>
+                            <td class="center">${s.all.draw}</td>
+                            <td class="center">${s.all.lose}</td>
+                            <td class="center">${s.all.goals.for}:${s.all.goals.against}</td>
+                            <td class="center">${diffFormatted}</td>
+                            <td class="right"><b>${s.points}</b></td>
+                        </tr>`;
+                    });
+                    container.innerHTML = html + `</table>`;
+                }
+            } catch(e) {}
+        }
 
         init();
     </script>
