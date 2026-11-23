@@ -24,7 +24,7 @@
             --border-color: #30363d;
             --live-red: #ff3333;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+- { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
         body { background-color: var(--bg-color); color: var(--text-main); padding: 15px; display: flex; justify-content: center; }
         .container { width: 100%; max-width: 950px; }
 
@@ -186,7 +186,7 @@
         <header>
             <h1>
                 <img src="https://media.api-sports.io/football/leagues/79.png" alt="2. Bundesliga Logo" style="height: 45px; width: 45px; object-fit: contain; vertical-align: middle;">
-                2. Bundesliga
+2. Bundesliga
             </h1>
             <div class="subtitle">Live, Team-Statistiken, Aufstellungen & Bestenlisten (Saison 2026/27)</div>
             <div class="author-sub">
@@ -227,6 +227,7 @@
                 <span id="pollingIcon">🟢</span> Live-Polling: <span id="pollingStateText">An</span>
             </button>
             <button onclick="subscribePush()" style="background: var(--accent-color); color: #000; font-weight: bold;">🔔 Supabase Tor-Alarm</button>
+            <button onclick="subscribeFinalsPush()" style="background: #21262d; color: var(--accent-color); border-color: var(--accent-color); font-weight: bold;">🏁 Endergebnisse</button>
         </div>
 
         <!-- Hauptbereich -->
@@ -299,6 +300,7 @@
     <script>
         const SUPABASE_URL = 'https://lhusylpjnujlqomougmg.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_yXEueWILvAq-Vm2VfTuYyg_BIQeE1KK';
+        const FINALS_DEDUP_TABLE = 'push_sent_events_buli2';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         const apiKey = "297322363f3bf16e1304cfb933a0c8d5";
@@ -449,7 +451,7 @@
             return outputArray;
         }
 
-        async function subscribePush() {
+        async function registerLiga2PushSubscription(successMessage) {
             if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
                 alert("Push-Benachrichtigungen werden von diesem Browser leider nicht unterstützt.");
                 return;
@@ -478,11 +480,19 @@
                     auth: auth
                 }, { onConflict: 'endpoint' });
 
-                alert("Supabase Push-Alarm (2. Liga) erfolgreich aktiviert!");
+                alert(successMessage);
             } catch (error) {
                 console.error('Fehler bei der Push-Registrierung:', error);
                 alert("Fehler beim Aktivieren der Benachrichtigung: " + error.message);
             }
+        }
+
+        async function subscribePush() {
+            await registerLiga2PushSubscription("Supabase Push-Alarm (2. Liga) erfolgreich aktiviert!");
+        }
+
+        async function subscribeFinalsPush() {
+            await registerLiga2PushSubscription("Supabase Endergebnis-Alarm (2. Liga) erfolgreich aktiviert!");
         }
 
         async function checkAllGoalsAndNotify(home, away, hScore, aScore, latestScorer, matchId, scoringTeam) {
