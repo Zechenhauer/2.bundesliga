@@ -24,7 +24,7 @@
             --border-color: #30363d;
             --live-red: #ff3333;
         }
-- { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
         body { background-color: var(--bg-color); color: var(--text-main); padding: 15px; display: flex; justify-content: center; }
         .container { width: 100%; max-width: 950px; }
 
@@ -301,6 +301,7 @@
         const SUPABASE_URL = 'https://lhusylpjnujlqomougmg.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_yXEueWILvAq-Vm2VfTuYyg_BIQeE1KK';
         const FINALS_DEDUP_TABLE = 'push_sent_events_buli2';
+        const FINALS_PREFIX = 'ft_liga2';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         const apiKey = "297322363f3bf16e1304cfb933a0c8d5";
@@ -317,6 +318,8 @@
         let smartPollingInterval = null;
         let isLivePollingEnabled = true;
         let recentGoalsList = JSON.parse(localStorage.getItem('liga2_recent_goals_cache') || '[]');
+        let sentFinalsCache = JSON.parse(localStorage.getItem('liga2_sent_finals') || '{}');
+        const processingFinals = new Set();
 
         // OPTIMIERUNG 1: Lokaler Cache für beendete Spiele (localStorage)
         let fixtureDetailsCache = JSON.parse(localStorage.getItem('liga2_fixture_details_cache') || '{}');
@@ -493,6 +496,56 @@
 
         async function subscribeFinalsPush() {
             await registerLiga2PushSubscription("Supabase Endergebnis-Alarm (2. Liga) erfolgreich aktiviert!");
+        }
+
+        async function checkFinishedMatchAndNotify(fixtureId, statusShort, homeName, awayName, hScore, aScore) {
+            if (!['FT', 'AET', 'PEN'].includes(statusShort)) return;
+            if (hScore === null || hScore === undefined || aScore === null || aScore === undefined) return;
+
+            const eventKey = `${FINALS_PREFIX}_${fixtureId}_${hScore}:${aScore}`;
+            if (sentFinalsCache[eventKey] || processingFinals.has(eventKey)) return;
+
+            processingFinals.add(eventKey);
+            try {
+                if (supabaseClient) {
+                    const { data: existingRows, error: selectError } = await supabaseClient
+                        .from(FINALS_DEDUP_TABLE)
+                        .select('event_key')
+                        .eq('event_key', eventKey)
+                        .limit(1);
+
+                    if (!selectError && Array.isArray(existingRows) && existingRows.length > 0) {
+                        sentFinalsCache[eventKey] = true;
+                        try { localStorage.setItem('liga2_sent_finals', JSON.stringify(sentFinalsCache)); } catch(e){}
+                        return;
+                    }
+
+                    const { error: insertError } = await supabaseClient
+                        .from(FINALS_DEDUP_TABLE)
+                        .insert([{ event_key: eventKey }]);
+
+                    if (insertError) return;
+
+                    await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
+                        method: 'POST',
+                        mode: 'cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            table: 'push_subscriptions_liga2',
+                            eventKey: eventKey,
+                            title: `🏁 Endergebnis (2. Bundesliga) ${hScore}:${aScore}`,
+                            body: `${homeName} : ${awayName}`
+                        })
+                    });
+                }
+
+                sentFinalsCache[eventKey] = true;
+                try { localStorage.setItem('liga2_sent_finals', JSON.stringify(sentFinalsCache)); } catch(e){}
+            } catch (e) {
+                console.error("Fehler beim 2. Liga Endergebnis-Push:", e);
+            } finally {
+                processingFinals.delete(eventKey);
+            }
         }
 
         async function checkAllGoalsAndNotify(home, away, hScore, aScore, latestScorer, matchId, scoringTeam) {
@@ -969,6 +1022,15 @@
                             }
                         }
                         previousScores[fixtureId] = { home: goalsHome, away: goalsAway };
+
+                        checkFinishedMatchAndNotify(
+                            fixtureId,
+                            m.fixture.status.short,
+                            home.name,
+                            away.name,
+                            m.goals.home,
+                            m.goals.away
+                        );
 
                         let displayHome = m.goals.home !== null ? m.goals.home : "-";
                         let displayAway = m.goals.away !== null ? m.goals.away : "-";
